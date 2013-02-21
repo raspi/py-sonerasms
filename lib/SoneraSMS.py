@@ -8,6 +8,7 @@
 
 import os
 import sys
+import re
 
 import requests
 
@@ -50,11 +51,11 @@ class SoneraSMS:
 
     r = self._ses.post("https://www4.sonera.fi/login/Login", data=payload)
 
-    if 'profile' in r.headers:
-      return True
+    if 'set-cookie' in r.headers:
+      if 'profile' in r.headers["set-cookie"]:
+        return True
 
     return False
-
 
   def send(self, recipient, message):
     if self._ses is None:
@@ -78,8 +79,18 @@ class SoneraSMS:
     # Send SMS message
     r = self._ses.post("https://www4.sonera.fi/vk/www/index.jsp", data=payload)
 
+    # Confirm sending
+    match = re.match(r".*Viesti.*L.*hetetty.*\d+.*vastaanottajalle.*onnistuneesti.*", r.text, re.MULTILINE|re.IGNORECASE|re.DOTALL) 
+
+    if match:
+      return True   
+    return False
+
 # Example:	
 if __name__ == "__main__":
   sms = SoneraSMS("myuser", "mypass")
   if sms.login():
-    sms.send("0401234567", "Hello from Python!")
+    if sms.send("0401234567", "Hello from Python!"):
+      print("Sent successfully!")
+    else:
+      print("Something went wrong while sending :(")
